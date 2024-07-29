@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leitfähigkeit in Lösungen Simulation</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: white; /* Set the background color outside the canvas to white */
+        }
+        #canvas {
+            border: 1px solid black;
+            background-color: #e0e0e0; /* Set the canvas background color to a lighter gray */
+        }
+        #sliderContainer {
+            margin: 20px;
+        }
+        #legend {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-top: 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+        .water { background-color: #2882FF; }
+        .cation { background-color: green; }
+        .anion { background-color: orange; }
+        .electron { background-color: yellow; }
+        .pos-electrode { background-color: red; }
+        .neg-electrode { background-color: blue; }
+	.entladen { background-color: grey;}
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div id="sliderContainer">
+        <label for="ionDensitySlider">Ionenkonzentration: </label>
+        <input type="range" id="ionDensitySlider" min="0" max="400" value="100">
+    </div>
+    <div id="legend">
+        <div class="legend-item">
+            <div class="legend-color water"></div>
+            <span>Wasser-Moleküle (Diese tragen der Einfachheit halber nicht zur Leitfähigkeit bei)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color cation"></div>
+            <span>Kathionen</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color anion"></div>
+            <span>Anionen</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color entladen"></div>
+            <span>Entladene Ionen</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color electron"></div>
+            <span>Elektronen</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color pos-electrode"></div>
+            <span>Pluspol</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color neg-electrode"></div>
+            <span>Minuspol</span>
+        </div>        
+    </div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const slider = document.getElementById('ionDensitySlider');
+        const sliderValue = document.getElementById('ionDensityValue');
+
+        let waterParticles = [];
+        let cations = [];
+        let anions = [];
+        let electronParticles = [];
+	let electronsInElectrode = [];
+        const waterDensity = 400;
+        let ionDensity = 100;
+        const electrodePosX = 90;
+        const electrodeNegX = 690;
+	const electrons = 50
+
+        slider.addEventListener('input', function() {
+            ionDensity = parseFloat(this.value);
+            createParticles();
+        });
+
+        function createParticles() {
+            waterParticles = [];
+            cations = [];
+            anions = [];
+            electronParticles = [];
+	    electronsInElectrode = [];
+
+            for (let i = 0; i < waterDensity; i++) {
+                waterParticles.push({x: Math.random() * 800, y: Math.random() * 600, vx: Math.random() * 2 - 1, vy: Math.random() * 2 - 1});
+            }
+
+            for (let i = 0; i < electrons; i++) {
+                electronsInElectrode.push({x: Math.random() * 14 + 3 + electrodePosX, y: Math.random() * 194 + 203, vx: Math.random() * 2 - 1, vy: Math.random() * 2 - 1});
+            }
+
+            for (let i = 0; i < ionDensity; i++) {
+                cations.push({x: Math.random() * 500 + 150 , y: Math.random() * 600, vx: Math.random() * 2 - 1, vy: Math.random() * 2 - 1});
+                anions.push({x: Math.random() * 500 + 150, y: Math.random() * 600, vx: Math.random() * 2 - 1, vy: Math.random() * 2 - 1});
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw water particles
+            ctx.fillStyle = '#2882FF';
+            waterParticles.forEach(p => {
+                ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+            });
+
+            // Draw cations
+            cations.forEach(p => {
+                ctx.fillStyle = p.discharged ? 'gray' : 'green';
+                ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+            });
+
+            // Draw anions
+            anions.forEach(p => {
+                ctx.fillStyle = p.discharged ? 'gray' : 'orange';
+                ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+            });
+
+            // Draw electrodes
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(electrodePosX, 200, 20, 200); // Positive electrode
+            ctx.fillStyle = 'red';
+            ctx.fillRect(electrodeNegX, 200, 20, 200); // Negative electrode
+
+            // Draw wires
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(electrodePosX + 10, 200);
+            ctx.lineTo(electrodePosX + 10, 0);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(electrodeNegX + 10, 200);
+            ctx.lineTo(electrodeNegX + 10, 0);
+            ctx.stroke();
+
+            // Draw electrons
+            electronParticles.forEach(p => {
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+            });
+
+	    // Draw electrons in Kathode
+            electronsInElectrode.forEach(p => {
+                ctx.fillStyle = 'yellow';
+                ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+            });
+
+        }
+
+        function update() {
+            // Update water particles
+            waterParticles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+            });
+
+            // Update cations
+            cations.forEach(p => {
+                if (!p.discharged) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    // Attract to negative electrode
+                    const dx = electrodeNegX + 10 - p.x;
+                    const dy = 300 - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const force = Math.min(0.5, 100 / (dist * dist));
+
+                    p.vx += force * dx / dist;
+                    p.vy += force * dy / dist;
+
+                    // Discharge at electrode and arrange at edge
+                    if (p.x>687 && p.x<713 && p.y>197 && p.y<403) {
+                        p.discharged = true;
+                        p.vx = 0;
+                        p.vy = 0;
+
+                        // Create electron particle
+                        electronParticles.push({x: 700, y: Math.min(p.y,400), vx: 0, vy: -2});
+                    }
+
+                    // Repel from edges
+                    if (p.x < 0) p.vx = Math.abs(p.vx);
+                    if (p.x > canvas.width) p.vx = -Math.abs(p.vx);
+                    if (p.y < 0) p.vy = Math.abs(p.vy);
+                    if (p.y > canvas.height) p.vy = -Math.abs(p.vy);
+                }
+            });
+
+            // Update anions
+            anions.forEach(p => {
+                if (!p.discharged) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    // Attract to positive electrode
+                    const dx = electrodePosX + 10 - p.x;
+                    const dy = 300 - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const force = Math.min(0.5, 100 / (dist * dist));
+
+                    p.vx += force * dx / dist;
+                    p.vy += force * dy / dist;
+
+                    // Discharge at electrode and arrange at edge
+                    if (p.x>87 && p.x<113 && p.y>197 && p.y<403) {
+                        p.discharged = true;
+                        p.vx = 0;
+                        p.vy = 0;
+
+                        // Create electron particle
+                        electronParticles.push({x: 100, y: 0, vx: 0, vy: 2});
+                    }
+
+                    // Repel from edges
+                    if (p.x < 0) p.vx = Math.abs(p.vx);
+                    if (p.x > canvas.width) p.vx = -Math.abs(p.vx);
+                    if (p.y < 0) p.vy = Math.abs(p.vy);
+                    if (p.y > canvas.height) p.vy = -Math.abs(p.vy);
+                }
+            });
+
+            // Update electron particles
+            electronParticles.forEach((p, index) => {
+	        p.y += p.vy;
+	        if (p.y < 0 || p.y > canvas.height || p.y > 300 && p.vy > 0) {
+        	    electronParticles.splice(index, 1);
+	        }
+	    });
+
+            // Update electron particles in Kathode
+            electronsInElectrode.forEach((p, index) => {
+	        p.y += p.vy;
+		// Repel from edges
+                    if (p.x < 3 + electrodePosX) p.vx = Math.abs(p.vx);
+                    if (p.x > 17 + electrodePosX) p.vx = -Math.abs(p.vx);
+                    if (p.y < 203) p.vy = Math.abs(p.vy);
+                    if (p.y > 397) p.vy = -Math.abs(p.vy);
+	    });
+        }
+
+        function animate() {
+            update();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        createParticles();
+        animate();
+    </script>
+</body>
+</html>
